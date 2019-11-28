@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class Player : Entity
 {
+    // Initialize the public enums
+    public enum States { DEFAULT, DRIVING }
+
     // Initialize the public variables
+    public States state;
     public float lookSensitivity;
     public float gunLerpRate;
     public float movementSpeed;
@@ -20,37 +24,57 @@ public class Player : MonoBehaviour
     int weaponID;
     public int fireRate;
     int fireAlarm;
+    Rigidbody rb;
+    CapsuleCollider collider;
 
     // Start is called before the first frame update
     void Start()
     {
-        Initialize(); // Initialize the player
+        Initialize(); // Initialize the entity
+
+        gunPivot.transform.parent = null;
+        rb = GetComponent<Rigidbody>();
+        collider = GetComponent<CapsuleCollider>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        Look(); // Rotate the player and the camera
-        Move(); // Move the player around
-        SwitchGun(); // Switch the current gun
-        Shoot(); // Shoot with the current gun
-        Lean(); // Lean the camera towards the current horizontal movement direction
-        LockCursor(); // Lock the cursor in the center of the screen, and hide it
+        RunState(); // Run the current player state
     }
 
-    // Initialize the player
-    void Initialize()
+    // Run the current player state
+    void RunState()
     {
-        gunPivot.transform.parent = null;
+        switch (state)
+        {
+            case States.DEFAULT:
+                Look(new Vector2(-Mathf.Infinity, Mathf.Infinity), new Vector2(-90f, 90f)); // Rotate the player and the camera
+                Move(); // Move the player around
+                SwitchGun(); // Switch the current gun
+                Shoot(); // Shoot with the current gun
+                Lean(); // Lean the camera towards the current horizontal movement direction
+                LockCursor(); // Lock the cursor in the center of the screen, and hide it
+                break;
+
+            case States.DRIVING:
+                HideGun(); // Hide the players current gun
+                Look(new Vector2(-35f, 45f), new Vector2(-15f, 7.5f)); // Rotate the player and the camera
+                LockCursor(); // Lock the cursor in the center of the screen, and hide it
+                break;
+        }
     }
 
     // Rotate the player and the camera
-    void Look()
+    void Look(Vector2 clampHor, Vector2 clampVer)
     {
-        rot.x -= Input.GetAxis("Mouse Y") * lookSensitivity * Time.deltaTime;
-        rot.y += Input.GetAxis("Mouse X") * lookSensitivity * Time.deltaTime;
+        var targetRotX = rot.x - Input.GetAxis("Mouse Y") * lookSensitivity * Time.deltaTime;
+        var targetRotY = rot.y + Input.GetAxis("Mouse X") * lookSensitivity * Time.deltaTime;
 
-        transform.rotation = Quaternion.Euler(0f, rot.y, 0f);
+        rot.x = Mathf.Clamp(targetRotX, clampVer.x, clampVer.y);
+        rot.y = Mathf.Clamp(targetRotY, clampHor.x, clampHor.y);
+
+        transform.localRotation = Quaternion.Euler(0f, rot.y, 0f);
         camTransform.rotation = Quaternion.Euler(rot.x, camTransform.eulerAngles.y, camTransform.eulerAngles.z);
 
         var targetRot = Quaternion.LookRotation(camTransform.forward);
@@ -94,9 +118,7 @@ public class Player : MonoBehaviour
         }
 
         for (var i = 0; i <= maxID; i++)
-        {
             guns[i].SetActive(i == weaponID);
-        }
     }
 
     // Shoot with the current gun
@@ -108,17 +130,11 @@ public class Player : MonoBehaviour
         {
             var obj = Instantiate(projectilePrefab, projectilePivot);
             obj.transform.parent = null;
+            obj.GetComponent<Projectile>().isFriendly = true;
 
-            //gunAnimator.SetBool("isShooting", true);
             gunAnimator.Play("GunShoot");
 
             fireAlarm = fireRate;
-        }
-        else
-        {
-            //gunAnimator.Play("GunIdle");
-
-            //gunAnimator.SetBool("isShooting", false);
         }
     }
 
@@ -127,5 +143,27 @@ public class Player : MonoBehaviour
     {
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    // Freeze the player in its current position
+    public void Freeze()
+    {
+        rb.isKinematic = true;
+        collider.enabled = false;
+    }
+
+    // Unfreeze the player
+    public void Unfreeze()
+    {
+        rb.isKinematic = false;
+        collider.enabled = true;
+    }
+
+    // Hide the players current gun
+    void HideGun()
+    {
+        var length = guns.Length;
+        for (var i = 0; i < length; i++)
+            guns[i].SetActive(false);
     }
 }

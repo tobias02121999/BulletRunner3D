@@ -4953,6 +4953,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6720076159050116782}
   - component: {fileID: 8961774835661779755}
+  - component: {fileID: 6160134975771352477}
   - component: {fileID: 7036705273738527422}
   m_Layer: 0
   m_Name: Projectile
@@ -4993,6 +4994,20 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!136 &6160134975771352477
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7717437418136542397}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  m_Radius: 0.19
+  m_Height: 0.52
+  m_Direction: 2
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &7036705273738527422
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5006,3 +5021,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 1500
+  isFriendly: 0
+  bloodPrefab: {fileID: 1540650303677205333, guid: 016841544277d9540b5621d3e30fea23,
+    type: 3}

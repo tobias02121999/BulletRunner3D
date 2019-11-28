@@ -2,36 +2,45 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Goon : MonoBehaviour
+public class Goon : Entity
 {
     // Initialize the public enums
-    public enum states { IDLE, CHASE, STRAFE, FLEE }
+    public enum States { IDLE, CHASE, STRAFE, FLEE }
 
     // Initialize the public variables
-    public states state;
-    public GameObject sightRangeSphere, strafeRangeSphere;
+    public States state;
+    public GameObject sightRangeSphere, strafeRangeSphere, fleeRangeSphere;
     public GameObject player;
     public Vector2 wanderDuration, strafeDuration;
-    public float wanderSpeed, strafeSpeed;
+    public float wanderSpeed, chaseSpeed, strafeSpeed, fleeSpeed;
     public Transform reference;
+    public Transform projectilePivot;
+    public GameObject projectilePrefab;
+    public Animator gunAnimator;
+    public GameObject corpsePrefab;
 
     // Initialize the private variables
-    float sightRange, strafeRange;
-    int wanderAlarm, strafeAlarm;
+    float sightRange, strafeRange, fleeRange;
+    int wanderAlarm, strafeAlarm, fireAlarm;
+    public int fireRate;
     bool isWandering;
     int strafeDir;
 
     // Start is called before the first frame update
     void Start()
     {
+        Initialize(); // Initialize the entity
+
         sightRange = sightRangeSphere.transform.localScale.x / 2f;
         strafeRange = strafeRangeSphere.transform.localScale.x / 2f;
+        fleeRange = fleeRangeSphere.transform.localScale.x / 2f;
     }
 
     // Update is called once per frame
     void Update()
     {
         RunState(); // Run the current goon state
+        Die(); // Die
     }
 
     // Run the current goon state
@@ -39,24 +48,30 @@ public class Goon : MonoBehaviour
     {
         switch (state)
         {
-            case states.IDLE:
+            case States.IDLE:
                 Scout(); // Scout the area for nearby enemies
                 Wander(); // Randomly wander around the place
                 break;
 
-            case states.CHASE:
+            case States.CHASE:
                 Scout(); // Scout the area for nearby enemies
-                Move(); // Move forward
+                Move(chaseSpeed); // Move forward
                 Aim(); // Aim at the player
+                Shoot(); // Shoot forward
                 break;
 
-            case states.STRAFE:
+            case States.STRAFE:
                 Scout(); // Scout the area for nearby enemies
                 Strafe(); // Move left and right
                 Aim(); // Aim at the player
+                Shoot(); // Shoot forward
                 break;
 
-            case states.FLEE:
+            case States.FLEE:
+                Scout(); // Scout the area for nearby enemies
+                Move(-fleeSpeed); // Move forward
+                Aim(); // Aim at the player
+                Shoot(); // Shoot forward
                 break;
         }
     }
@@ -68,13 +83,19 @@ public class Goon : MonoBehaviour
         var dist = Vector3.Distance(transform.position, playerPos);
 
         if (dist > sightRange)
-            state = states.IDLE;
-
-        if (dist <= sightRange && dist > strafeRange)
-            state = states.CHASE;
-
-        if (dist <= strafeRange)
-            state = states.STRAFE;
+            state = States.IDLE;
+        else
+        {
+            if (dist <= strafeRange)
+            {
+                if (dist <= fleeRange)
+                    state = States.FLEE;
+                else
+                    state = States.STRAFE;
+            }
+            else
+                state = States.CHASE;
+        }
     }
 
     // Randomly wander around the place
@@ -104,9 +125,9 @@ public class Goon : MonoBehaviour
     }
 
     // Move forward
-    void Move()
+    void Move(float speed)
     {
-        var step = wanderSpeed * Time.deltaTime;
+        var step = speed * Time.deltaTime;
         transform.position += transform.forward * step;
     }
 
@@ -132,5 +153,33 @@ public class Goon : MonoBehaviour
             transform.position += transform.right * strafeSpeed * Time.deltaTime;
         else
             transform.position -= transform.right * strafeSpeed * Time.deltaTime;
+    }
+
+    // Shoot forward
+    void Shoot()
+    {
+        fireAlarm--;
+
+        if (fireAlarm <= 0)
+        {
+            var obj = Instantiate(projectilePrefab, projectilePivot);
+            obj.transform.parent = null;
+
+            gunAnimator.Play("GunShoot");
+
+            fireAlarm = fireRate;
+        }
+    }
+
+    // Die
+    void Die()
+    {
+        if (health <= 0)
+        {
+            var obj = Instantiate(corpsePrefab, transform);
+            obj.transform.parent = null;
+
+            Destroy(this.gameObject);
+        }
     }
 }

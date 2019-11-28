@@ -6,6 +6,8 @@ public class Projectile : MonoBehaviour
 {
     // Initialize the public variables
     public float speed;
+    public bool isFriendly;
+    public GameObject bloodPrefab;
 
     // Initialize the private variables
     Rigidbody rb;
@@ -32,5 +34,23 @@ public class Projectile : MonoBehaviour
     void Move()
     {
         rb.velocity = transform.forward * speed * Time.deltaTime;
+    }
+
+    // Deal damage
+    void OnTriggerEnter(Collider other)
+    {
+        // Deal damage
+        var entity = other.gameObject.GetComponentInParent<Entity>();
+        if (entity != null && entity.isFriendly != isFriendly)
+        {
+            var obj = Instantiate(bloodPrefab, transform);
+            obj.transform.parent = null;
+
+            entity.health--;
+            Destroy(this.gameObject);
+        }
+
+        if (other.CompareTag("Wall"))
+            Destroy(this.gameObject);
     }
 }
